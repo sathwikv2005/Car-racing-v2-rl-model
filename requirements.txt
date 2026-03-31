@@ -1,7 +1,6 @@
 gymnasium==0.29.1
 box2d==2.3.10
 stable-baselines3[extra]==2.3.2
-torch
 numpy==1.26.4
 opencv-python==4.9.0.80
 tensorboard==2.16.2
