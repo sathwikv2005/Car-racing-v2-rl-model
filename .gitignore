@@ -1,1 +1,3 @@
 rl_env/*
+logs/*
+__pycache__/*
