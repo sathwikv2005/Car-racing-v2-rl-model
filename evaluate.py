@@ -1,15 +1,27 @@
 import gymnasium as gym
+import time
 from stable_baselines3 import PPO
+from stable_baselines3.common.vec_env import DummyVecEnv, VecFrameStack
 
-env = gym.make("CarRacing-v2", render_mode="human")
+def make_env():
+    return gym.make("CarRacing-v2", render_mode="human")
 
-model = PPO.load("model/ppo_carracing")
+def main():
+    env = DummyVecEnv([make_env])
+    env = VecFrameStack(env, n_stack=4)
 
-obs, _ = env.reset()
+    model = PPO.load("model/ppo_carracing")
 
-while True:
-    action, _ = model.predict(obs)
-    obs, reward, terminated, truncated, _ = env.step(action)
+    obs = env.reset()
 
-    if terminated or truncated:
-        obs, _ = env.reset()
+    while True:
+        action, _ = model.predict(obs, deterministic=True)
+        obs, rewards, dones, infos = env.step(action)
+
+        time.sleep(0.03)
+
+        if dones[0]: 
+            obs = env.reset()
+
+if __name__ == "__main__":
+    main()
