@@ -23,7 +23,7 @@ def main():
         ent_coef=0.01,
     )
 
-    model.learn(total_timesteps=500_000)
+    model.learn(total_timesteps=5000)
     model.save("model/ppo_carracing")
 
 
