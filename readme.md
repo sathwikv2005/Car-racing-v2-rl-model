@@ -4,7 +4,8 @@ Car-racing-v2-rl-model
 
 ## Setup
 
-Clone the repository 
+Clone the repository
+
 ```bash
 git clone https://github.com/sathwikv2005/Car-racing-v2-rl-model.git
 cd Car-racing-v2-rl-model
@@ -12,26 +13,35 @@ cd Car-racing-v2-rl-model
 
 ## Installation
 
-Create virtual environment (optional but recommended) 
-```bash
-python -m venv venv  
-```
-Activate environment  
+Create virtual environment (optional but recommended)
 
-Windows:  
 ```bash
-venv\Scripts\activate  
+python -m venv .venv
 ```
-macOS/Linux:  
+
+Activate environment
+
+Windows:
+
 ```bash
-source venv/bin/activate  
+.venv\Scripts\activate
 ```
-Install dependencies  
+
+macOS/Linux:
+
 ```bash
-pip install -r requirements.txt 
+source .venv/bin/activate
+```
+
+Install dependencies
+
+```bash
+pip install -r requirements.txt
 pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
 ```
-## Run 
+
+## Run
+
 ```bash
-python evaluate.py  
+python evaluate.py
 ```
