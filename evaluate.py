@@ -9,7 +9,7 @@ def main():
     env = DummyVecEnv([make_env(0, render_mode="human")])
     env = VecFrameStack(env, n_stack=4)
 
-    model = PPO.load("model/ppo_carracing")
+    model = PPO.load("model/ppo_carracing_custom_reward")
 
     obs = env.reset()
 
