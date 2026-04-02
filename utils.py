@@ -16,19 +16,21 @@ def custom_reward(obs, reward, action):
     road_ratio = np.mean(road_pixels > 100)
 
     shaped_reward = reward
+    if abs(steer) > 0.8 and gas > 0.5:
+        shaped_reward -= 1.0
 
     if road_ratio < 0.1:
-        shaped_reward -= 2.0  
+        shaped_reward -= 3.0  
     else:
-        shaped_reward += 0.5  
+        shaped_reward += 0.2  
 
-    shaped_reward += gas * 0.5
+    #shaped_reward += gas * 0.5
 
-    shaped_reward -= brake * 0.3
+    shaped_reward -= brake * 0.2
 
-    shaped_reward -= abs(steer) * 0.2
+    shaped_reward -= abs(steer) * 0.5
 
     # Small alive bonus
-    shaped_reward += 0.05
+    shaped_reward += 0.01
 
     return shaped_reward
