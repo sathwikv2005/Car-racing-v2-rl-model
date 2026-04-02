@@ -11,7 +11,7 @@ def main():
         "CnnPolicy",
         env,
         verbose=1,
-        tensorboard_log="./logs/",
+        tensorboard_log="./logs/ppo/",
         device="cuda",
 
         n_steps=512,
