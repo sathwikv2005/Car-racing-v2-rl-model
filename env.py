@@ -1,6 +1,6 @@
 import gymnasium as gym
 import numpy as np
-from stable_baselines3.common.vec_env import SubprocVecEnv, VecFrameStack
+from stable_baselines3.common.vec_env import SubprocVecEnv, VecFrameStack, VecTransposeImage, VecNormalize
 from stable_baselines3.common.monitor import Monitor
 from utils import custom_reward
 
@@ -42,10 +42,14 @@ def make_env(rank, render_mode=None):
     return _init
 
 
-def get_env(n_envs=4, render_mode=None):
+def get_env(n_envs=4, render_mode=None, normalize=True):
     env = SubprocVecEnv([make_env(i, render_mode) for i in range(n_envs)])
 
-    # Frame stacking
     env = VecFrameStack(env, n_stack=4)
+    
+    env = VecTransposeImage(env)
+
+    if normalize:
+        env = VecNormalize(env, norm_obs=False, norm_reward=True)
 
     return env
