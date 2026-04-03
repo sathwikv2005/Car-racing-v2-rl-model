@@ -1,5 +1,5 @@
 .venv/*
 rl_env/*
 logs/*
-__pycache__/*
-*/__pycache__/*
+**/__pycache__/*
+**/checkpoint/*
