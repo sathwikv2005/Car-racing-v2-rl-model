@@ -17,8 +17,6 @@ def main():
     # slow but BEST model
     model = PPO.load("model/ppo/best/best_model")
 
-    # not good
-    # model = PPO.load("model/ppo/best/_best_model")
 
     # high speeds due to which 90 degree turns not handled well
     # model = PPO.load("model/ppo/_ppo_carracing_custom_reward")
