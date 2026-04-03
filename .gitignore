@@ -3,3 +3,4 @@ rl_env/*
 logs/*
 __pycache__/*
 */__pycache__/*
+model/ppo/vecnormalize.pkl
