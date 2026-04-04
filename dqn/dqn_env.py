@@ -1,77 +1,101 @@
 import gymnasium as gym
 import numpy as np
 
+from gymnasium.wrappers import ResizeObservation
 from stable_baselines3.common.monitor import Monitor
-from stable_baselines3.common.vec_env import DummyVecEnv, VecFrameStack
 
-from gymnasium.wrappers import ResizeObservation, GrayScaleObservation
-
-from dqn_utils import custom_reward
+from dqn_utils import RewardWrapper
 
 
-# ✅ MINIMAL ACTION SPACE + SMOOTHING
+# ✅ FRAME SKIP FIRST
+class FrameSkipWrapper(gym.Wrapper):
+    def __init__(self, env, skip=3):
+        super().__init__(env)
+        self.skip = skip
+
+    def step(self, action):
+        total_reward = 0
+
+        for _ in range(self.skip + 1):
+            obs, reward, terminated, truncated, info = self.env.step(action)
+
+            if isinstance(reward, tuple):  # safety
+                reward = reward[0]
+
+            total_reward += reward
+
+            if terminated or truncated:
+                break
+
+        return obs, total_reward, terminated, truncated, info
+
+
+# ✅ DISCRETE ACTIONS (CRUCIAL FOR DQN)
 class DiscreteActionWrapper(gym.ActionWrapper):
     def __init__(self, env):
         super().__init__(env)
 
         self.actions = [
-            [0.0, 1.0, 0.0],   # straight
-            [-0.5, 0.8, 0.0],  # left
-            [0.5, 0.8, 0.0],   # right
+            [0.0, 0.0, 0.0],     # no-op
+            [-1.0, 0.0, 0.0],    # left
+            [1.0, 0.0, 0.0],     # right
+            [0.0, 1.0, 0.0],     # gas
+            [0.0, 0.0, 0.8],     # brake
+            [-1.0, 1.0, 0.0],    # left + gas
+            [1.0, 1.0, 0.0],     # right + gas
+            [-0.5, 1.0, 0.0],    # soft left
+            [0.5, 1.0, 0.0],     # soft right
         ]
 
-        self.prev_action = 0
+        self.actions = [np.array(a, dtype=np.float32) for a in self.actions]
         self.action_space = gym.spaces.Discrete(len(self.actions))
 
     def action(self, action):
-        # Handle VecEnv output
-        if isinstance(action, (list, np.ndarray)):
-            action = int(action[0])
-
-        # 🔥 Prevent instant LEFT ↔ RIGHT flip (causes spinning)
-        if abs(action - self.prev_action) == 2:
-            action = self.prev_action
-
-        self.prev_action = action
-
         return self.actions[action]
 
 
-# ✅ REWARD WRAPPER (FIXED)
-class RewardWrapper(gym.Wrapper):
-    def __init__(self, env):
+# ✅ MAIN ENV
+class CarRacingEnv(gym.Wrapper):
+    def __init__(self, render_mode=None):
+        env = gym.make("CarRacing-v2", render_mode=render_mode)
         super().__init__(env)
 
+        self.reward_wrapper = RewardWrapper()
+        self.prev_action = None
+
+    def reset(self, **kwargs):
+        obs, info = self.env.reset(**kwargs)
+        self.reward_wrapper.reset()
+        self.prev_action = np.zeros(3, dtype=np.float32)
+        return obs, info
+
     def step(self, action):
-        if isinstance(action, (list, np.ndarray)):
-            action = int(action[0])
+        obs, reward, terminated, truncated, info = self.env.step(action)
 
-        real_action = self.env.actions[action]
+        # ✅ FIX: unpack reward properly
+        reward, reward_info = self.reward_wrapper.custom_reward(
+            obs, reward, action, self.prev_action
+        )
 
-        obs, reward, terminated, truncated, info = self.env.step(real_action)
+        info["reward"] = reward_info
 
-        shaped_reward = custom_reward(obs, reward, real_action)
+        self.prev_action = action
 
-        return obs, shaped_reward, terminated, truncated, info
+        return obs, reward, terminated, truncated, info
 
 
+# ✅ MAKE ENV (CORRECT ORDER)
 def make_env(render_mode=None):
     def _init():
-        env = gym.make("CarRacing-v2", render_mode=render_mode)
+        env = CarRacingEnv(render_mode=render_mode)
 
-        env = ResizeObservation(env, (84, 84))
-        env = GrayScaleObservation(env, keep_dim=True)
-
+        env = FrameSkipWrapper(env, skip=3)
         env = DiscreteActionWrapper(env)
-        env = RewardWrapper(env)
+
+        env = ResizeObservation(env, (64, 64))
+
         env = Monitor(env)
 
         return env
 
     return _init
-
-
-def get_env(render_mode=None):
-    env = DummyVecEnv([make_env(render_mode)])
-    env = VecFrameStack(env, n_stack=4)
-    return env

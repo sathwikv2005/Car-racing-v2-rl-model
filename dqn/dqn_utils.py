@@ -1,45 +1,66 @@
 import numpy as np
 
 
-def custom_reward(obs, reward, action):
-    if isinstance(obs, tuple):
-        obs = obs[0]
+class RewardWrapper:
+    def __init__(self):
+        self.no_progress_steps = 0
+        self.offroad_steps = 0
+        self.prev_obs = None
 
-    if obs.ndim == 2:
-        obs = np.expand_dims(obs, axis=-1)
+    def reset(self):
+        self.no_progress_steps = 0
+        self.offroad_steps = 0
+        self.prev_obs = None
 
-    road = obs[:, :, 0] / 255.0
+    def custom_reward(self, obs, reward, action, prev_action):
+        steer, gas, brake = action
 
-    steer, gas, _ = action
+        if isinstance(obs, tuple):
+            obs = obs[0]
 
-    road_mask = road > 0.4
-    road_ratio = np.mean(road_mask)
+        # --- ROAD DETECTION ---
+        r, g, b = obs[:, :, 0], obs[:, :, 1], obs[:, :, 2]
+        grass = (g > 150) & (g > r + 20) & (g > b + 20)
+        road = ~grass
+        road_ratio = np.mean(road)
 
-    # ❌ Off-road penalty
-    if road_ratio < 0.05:
-        return -5.0
+        shaped = float(reward)
 
-    shaped_reward = 0.0
+        # --- OFFROAD ---
+        if road_ratio < 0.1:
+            self.offroad_steps += 1
+            shaped -= min(2.0, self.offroad_steps * 0.1)
+        else:
+            self.offroad_steps = 0
+            shaped += 0.1
 
-    # 🚗 Always encourage forward movement
-    shaped_reward += 1.0
+        # --- STEERING SMOOTHNESS ---
+        shaped -= abs(steer) * 0.03
 
-    # 🛣️ Stay on road
-    shaped_reward += road_ratio * 2.0
+        # --- FORWARD DRIVING ---
+        if gas > 0.3 and abs(steer) < 0.3:
+            shaped += 0.1
 
-    # 🧭 Look-ahead steering (top half of image)
-    h, w = road.shape
-    look = road_mask[:h // 2, :]
+        # --- BRAKE PENALTY ---
+        shaped -= brake * 0.05
 
-    if np.sum(look) > 0:
-        x = np.where(look)[1]
-        center = np.mean(x) / w
-    else:
-        center = 0.5
+        # --- PROGRESS (CLIPPED — VERY IMPORTANT) ---
+        if self.prev_obs is not None:
+            diff = np.mean(
+                np.abs(obs.astype(np.float32) - self.prev_obs.astype(np.float32))
+            )
+            progress = np.clip(diff * 0.05, 0, 0.2)
+            shaped += progress
 
-    direction_error = center - 0.5
+            if diff < 0.02:
+                self.no_progress_steps += 1
+            else:
+                self.no_progress_steps = 0
 
-    # 🔥 Steering alignment
-    shaped_reward += -abs(direction_error - steer)
+        # --- STAGNATION ---
+        if self.no_progress_steps > 40:
+            shaped -= 0.3
 
-    return shaped_reward
+        self.prev_obs = obs
+
+        return shaped, {}
