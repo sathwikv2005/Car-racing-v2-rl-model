@@ -11,38 +11,55 @@ class CarRacingEnv(gym.Wrapper):
     def __init__(self, render_mode=None):
         env = gym.make("CarRacing-v2", render_mode=render_mode)
         super().__init__(env)
-        self.prev_action = np.array([0.0, 0.0, 0.0])
 
         self.reward_wrapper = RewardWrapper()
         self.prev_action = None
+        self.prev_tile_count = 0
 
     def reset(self, **kwargs):
         obs, info = self.env.reset(**kwargs)
+
         self.reward_wrapper.reset()
-        self.prev_action = np.zeros(self.action_space.shape)
         self.prev_action = np.array([0.0, 0.0, 0.0])
+        self.prev_tile_count = 0
+
         return obs, info
 
     def step(self, action):
-        
-        
-
         obs, reward, terminated, truncated, info = self.env.step(action)
 
-        reward, reward_components = self.reward_wrapper.custom_reward(
-            obs, reward, action, self.prev_action
-        )
-        info["reward_components"] = reward_components
-        
-        # smooth prev action
-        # if self.prev_action is not None:
-        #     action = 0.7 * self.prev_action + 0.3 * action
+        car = self.env.unwrapped.car
 
-        # Update previous action
+        if car is not None:
+            vel = car.hull.linearVelocity
+            speed = float(np.linalg.norm([vel[0], vel[1]]))
+        else:
+            speed = 0.0
+
+        # --- TILE PROGRESS ---
+        tile_count = self.env.unwrapped.tile_visited_count
+        tile_progress = tile_count - self.prev_tile_count
+        self.prev_tile_count = tile_count
+
+        state_info = {
+            "speed": speed,
+            "tile_progress": tile_progress,
+        }
+
+        # --- APPLY CUSTOM REWARD ---
+        shaped_reward, reward_info = self.reward_wrapper.custom_reward(
+            obs,
+            reward,
+            action,
+            self.prev_action,
+            state_info,
+        )
+
+        info["reward_components"] = reward_info
+
         self.prev_action = action
 
-        return obs, reward, terminated, truncated, info
-    
+        return obs, shaped_reward, terminated, truncated, info
 class FrameSkipWrapper(gym.Wrapper):
     def __init__(self, env, skip=4):
         super().__init__(env)
@@ -68,7 +85,8 @@ def make_env(render_mode=None):
 
     env = FrameSkipWrapper(env, skip=3)
 
-    env = Monitor(env)
     env = WarpFrame(env)  # grayscale + resize
+
+    env = Monitor(env)
 
     return env
