@@ -19,6 +19,20 @@ os.makedirs(BEST_MODEL_DIR, exist_ok=True)
 N_ENVS = 8
 N_STACK = 4
 
+import re
+
+def get_next_run_id():
+    if not os.path.exists(LOG_DIR):
+        return 1
+
+    runs = []
+    for name in os.listdir(LOG_DIR):
+        match = re.search(r"SAC_(\d+)", name)  # 👈 key fix
+        if match:
+            runs.append(int(match.group(1)))
+
+    return max(runs, default=0) + 1
+
 
 def make_env_fn():
     def _init():
@@ -89,14 +103,19 @@ def main():
 
     reward_callback = RewardLoggingCallback(log_freq=1000)
 
+    run_id = get_next_run_id()
+    run_name = f"{run_id}_sac_carracing"
+
+    print(f'saving at {MODEL_DIR}/{run_name}')
+
     model.learn(
-        total_timesteps=2_000_000,
+        total_timesteps=1_000_000,
         callback=CallbackList([eval_callback, checkpoint_callback, reward_callback]),
         progress_bar=True
     )
 
     
-    model.save(f"{MODEL_DIR}/sac_carracing")
+    model.save(f"{MODEL_DIR}/{run_name}")
 
     print("Training complete!")
 
