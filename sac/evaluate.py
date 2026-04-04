@@ -5,9 +5,9 @@ from env import make_env
 import matplotlib.pyplot as plt
 import numpy as np
 
-MODEL_PATH = "../model/sac/best/best_model.zip"
-# MODEL_PATH = "../model/sac/sac_carracing"
-MODEL_PATH = "../model/sac/checkpoint/sac_checkpoint_350000_steps"
+# MODEL_PATH = "../model/sac/best/best_model.zip"
+MODEL_PATH = "../model/sac/sac_carracing"
+# MODEL_PATH = "../model/sac/checkpoint/sac_checkpoint_100000_steps"
 
 
 def main():
