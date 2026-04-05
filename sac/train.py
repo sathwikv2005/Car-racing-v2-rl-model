@@ -17,7 +17,7 @@ os.makedirs(MODEL_DIR, exist_ok=True)
 os.makedirs(BEST_MODEL_DIR, exist_ok=True)
 
 # --- Parallel environments ---
-N_ENVS = 8
+N_ENVS = 4
 N_STACK = 4
 
 import re
@@ -62,21 +62,21 @@ def main():
         verbose=1,
 
 
-        buffer_size=50_000,
+        buffer_size=100_000,
         batch_size=256,
-        learning_rate=1e-4,
+        learning_rate=5e-5,
 
         # multi-env
         train_freq=(16, "step"),
-        gradient_steps=4,  
+        gradient_steps=16,  
 
-        # learning_starts=5_000,
+        learning_starts=5_000,
 
         gamma=0.99,
         tau=0.005,
 
         # Exploration
-        ent_coef="auto_0.5",
+        ent_coef="auto_0.1",
 
         # Stability
         target_update_interval=1,
@@ -85,7 +85,7 @@ def main():
         tensorboard_log=LOG_DIR,
     )
 
-    model.set_parameters("../model/sac/best/69_best_model.zip")
+    model.set_parameters("../model/sac/best/86_best_model.zip")
 
 
 

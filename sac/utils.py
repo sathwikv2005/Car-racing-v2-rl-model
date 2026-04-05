@@ -54,10 +54,10 @@ class RewardWrapper:
         # Focus on region ahead of the car
         h, w = road_mask.shape
 
-        curve_box_sh = h*0.4
+        curve_box_sh = h*0.2
         curve_box_eh = h*0.8
-        curve_box_sw = w*0.3
-        curve_box_ew = w*0.7
+        curve_box_sw = w*0.2
+        curve_box_ew = w*0.8
 
         roi = road_mask[int( curve_box_sh):int( curve_box_eh), int( curve_box_sw):int( curve_box_ew)]
 
@@ -67,6 +67,8 @@ class RewardWrapper:
 
         left_mean = np.mean(left)
         right_mean = np.mean(right)
+
+        center_offset = abs(left_mean - right_mean)
 
         total = left_mean + right_mean + 1e-6  # avoid divide by zero
         curve_signal = (left_mean - right_mean) / total
@@ -86,22 +88,28 @@ class RewardWrapper:
 #         debug = obs.copy()
 
 #         # ROI coordinates
-#         y1, y2 = int(car_box_sh), int(car_box_eh)
-#         x1, x2 = int(car_box_sw), int(car_box_ew)
+#         y1, y2 = int(curve_box_sh), int(curve_box_eh)
+#         x1, x2 = int(curve_box_sw), int(curve_box_ew)
 
 #         # Draw rectangle (BGR: Green)
 #         color = (0, 255, 0)
 #         if grass_ratio > 0.3:
 #             color = (0, 0, 255)
-#         cv2.rectangle(debug, (x1, y1), (x2, y2), color, 1)
 
-#         text = f"{grass_ratio:.2f}"
+#         cv2.rectangle(debug, (x1, y1), (x2, y2), (255, 255, 0), 2)  # cyan box
+
+#         # --- Draw center split ---
+#         mid_x = (x1 + x2) // 2
+#         cv2.line(debug, (mid_x, y1), (mid_x, y2), (255, 0, 0), 2)  # blue line
+
+#         # text = f"{grass_ratio:.2f}"
+#         text = f"L:{left_mean:.2f} R:{right_mean:.2f}"
 #         cv2.putText(
 #             debug,
 #             text,
 #             (x1, y1 - 5),
 #             cv2.FONT_HERSHEY_SIMPLEX,
-#             0.4,
+#             0.3,
 #             color,
 #             1,
 #             cv2.LINE_AA
@@ -119,17 +127,18 @@ class RewardWrapper:
         shaped_reward += road_reward
 
 
-        offroad_reward = 0
-        if grass_ratio > 0.3:
-            offroad_reward = -1
-        shaped_reward += offroad_reward
+        offroad_penalty = -3.0 * grass_ratio
+        shaped_reward += offroad_penalty
+
+        center_penality = (center_offset * 0.5) ** 1.5
+        shaped_reward -= center_penality
 
         # Speed Reward (encourage forward motion)
        
         speed = float(state_info["speed"])
 
         # Smooth reward proportional to speed
-        move_reward = speed / 150.0  
+        move_reward = (speed / 100.0 ) ** 1.5
         shaped_reward += move_reward
 
 
@@ -140,22 +149,28 @@ class RewardWrapper:
 
         # speed_reward = (1.0 - speed_error) * 0.5
         slow_penality = 0
-        if speed < 20:
-            slow_penality = (speed-20) * 0.05
+        slow_threshold = 40
+        # if speed < slow_threshold:
+        #     slow_penality = (speed-slow_threshold) * 0.05
 
         shaped_reward += speed_reward 
         shaped_reward += slow_penality 
 
-        gas_reward = gas * 0.1
+        gas_reward = gas * 0.1 * (1 - grass_ratio)
         shaped_reward += gas_reward
 
+
+        offroad_speeding_penalty = 0
+        if grass_ratio > 0.2:
+            offroad_speeding_penalty = speed / 50.0
+            shaped_reward -= offroad_speeding_penalty
        
         # Tile Progress Reward (primary objective)
        
         tile_progress = state_info["tile_progress"]
 
         if tile_progress > 0:
-            tile_reward = tile_progress * 10.0
+            tile_reward = tile_progress * 6.0 * (1 - grass_ratio)
             shaped_reward += tile_reward
             got_tile = 1
         else:
@@ -165,8 +180,11 @@ class RewardWrapper:
        
         # Control Penalties (stability constraints)
        
-        steer_penalty = abs(steer) * 0.03 # penalize jitter
+        steer_penalty = abs(steer) * 0.05 # penalize jitter
         brake_penalty = brake * 0.005
+
+        steer_change_penalty = abs(steer - prev_action[0]) * 0.1
+        shaped_reward -= steer_change_penalty
 
         shaped_reward -= steer_penalty
         shaped_reward -= brake_penalty
@@ -182,12 +200,15 @@ class RewardWrapper:
             "reward/base": base_reward,
             "reward/total": shaped_reward,
             "reward/road": road_reward,
-            "reward/off-road": offroad_reward,
+            "reward/off-road": offroad_penalty,
+            "reward/offroad_speeding_penalty": offroad_speeding_penalty,
             "reward/move": move_reward,
             "reward/speed_error": speed_reward,
             "reward/slow_penality": slow_penality,
+            "reward/center_penality": center_penality,
             "reward/tile": tile_reward,
             "reward/steer_penalty": -steer_penalty,
+            "reward/steer_change_penalty": -steer_change_penalty,
             "reward/brake_penalty": -brake_penalty,
             "reward/gas": gas_reward,
 
