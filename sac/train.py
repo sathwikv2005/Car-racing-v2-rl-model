@@ -1,5 +1,6 @@
 import os
 from stable_baselines3 import SAC
+from stable_baselines3.common.type_aliases import TrainFreq
 from stable_baselines3.common.vec_env import SubprocVecEnv, VecFrameStack, VecTransposeImage, DummyVecEnv
 from stable_baselines3.common.callbacks import EvalCallback, CheckpointCallback, CallbackList
 from reward_callback import RewardLoggingCallback
@@ -27,7 +28,7 @@ def get_next_run_id():
 
     runs = []
     for name in os.listdir(LOG_DIR):
-        match = re.search(r"SAC_(\d+)", name)  # 👈 key fix
+        match = re.search(r"SAC_(\d+)", name) 
         if match:
             runs.append(int(match.group(1)))
 
@@ -63,19 +64,19 @@ def main():
 
         buffer_size=50_000,
         batch_size=256,
-        learning_rate=3e-4,
+        learning_rate=1e-4,
 
         # multi-env
         train_freq=(16, "step"),
         gradient_steps=4,  
 
-        learning_starts=5_000,
+        # learning_starts=5_000,
 
         gamma=0.99,
         tau=0.005,
 
         # Exploration
-        ent_coef="auto_1.0",  
+        ent_coef="auto_0.5",
 
         # Stability
         target_update_interval=1,
@@ -83,6 +84,10 @@ def main():
         device="cuda",
         tensorboard_log=LOG_DIR,
     )
+
+    model.set_parameters("../model/sac/best/69_best_model.zip")
+
+
 
     eval_callback = EvalCallback(
         eval_env,
@@ -109,7 +114,7 @@ def main():
     print(f'saving at {MODEL_DIR}/{run_name}')
 
     model.learn(
-        total_timesteps=2_000_000,
+        total_timesteps=300_000,
         callback=CallbackList([eval_callback, checkpoint_callback, reward_callback]),
         progress_bar=True
     )
