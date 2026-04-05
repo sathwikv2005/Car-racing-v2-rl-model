@@ -109,7 +109,7 @@ def main():
     print(f'saving at {MODEL_DIR}/{run_name}')
 
     model.learn(
-        total_timesteps=1_000_000,
+        total_timesteps=2_000_000,
         callback=CallbackList([eval_callback, checkpoint_callback, reward_callback]),
         progress_bar=True
     )

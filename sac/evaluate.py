@@ -5,9 +5,9 @@ from env import make_env
 import matplotlib.pyplot as plt
 import numpy as np
 
-# MODEL_PATH = "../model/sac/best/best_model.zip"
-MODEL_PATH = "../model/sac/sac_carracing"
-# MODEL_PATH = "../model/sac/checkpoint/sac_checkpoint_100000_steps"
+MODEL_PATH = "../model/sac/best/best_model.zip"
+# MODEL_PATH = "../model/sac/69_sac_carracing"
+# MODEL_PATH = "../model/sac/checkpoint/sac_checkpoint_950000_steps"
 
 
 def main():
@@ -36,6 +36,9 @@ def main():
     while True:
         action, _ = model.predict(obs, deterministic=True)
         obs, rewards, dones, infos = env.step(action)
+
+        components = infos[0].get("reward_components", {})
+        print(f"Total: {rewards[0]:.2f} | {components}")
         
         if dones[0]:
             obs = env.reset()

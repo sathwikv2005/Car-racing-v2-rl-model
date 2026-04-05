@@ -16,17 +16,10 @@ class RewardWrapper:
         # Step counter for optional periodic diagnostics
         self.step_count = 0
 
-        # Running statistics (useful for debugging trends)
-        self.road_ratios = []
-        self.speeds = []
-        self.rewards = []
 
     def reset(self):
         """Reset episode-specific state."""
         self.step_count = 0
-        self.road_ratios.clear()
-        self.speeds.clear()
-        self.rewards.clear()
 
     def custom_reward(self, obs, reward, action, prev_action, state_info):
         
@@ -64,8 +57,8 @@ class RewardWrapper:
 
         road_ratio = float(np.mean(roi))
 
-        # Encourage staying on road (dense positive signal)
-        road_reward = road_ratio * 0.2
+        # Encourage staying on road 
+        road_reward = (road_ratio-0.5) * 2
         shaped_reward += road_reward
 
        
@@ -74,9 +67,11 @@ class RewardWrapper:
         speed = float(state_info["speed"])
 
         # Smooth reward proportional to speed
-        move_reward = speed / 50.0
+        move_reward = speed / 150.0  
         shaped_reward += move_reward
 
+        gas_reward = gas * 0.05
+        shaped_reward += gas_reward
        
         # Tile Progress Reward (primary objective)
        
@@ -100,11 +95,7 @@ class RewardWrapper:
         shaped_reward -= brake_penalty
 
        
-        # Update Running Statistics (for diagnostics)
-       
-        self.road_ratios.append(road_ratio)
-        self.speeds.append(speed)
-        self.rewards.append(shaped_reward)
+        
 
        
         # Logging Information (structured for analysis)
@@ -118,6 +109,7 @@ class RewardWrapper:
             "reward/tile": tile_reward,
             "reward/steer_penalty": -steer_penalty,
             "reward/brake_penalty": -brake_penalty,
+            "reward/gas": gas_reward,
 
             # --- State metrics ---
             "state/speed": speed,
