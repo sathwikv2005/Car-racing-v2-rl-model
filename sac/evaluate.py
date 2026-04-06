@@ -6,8 +6,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 MODEL_PATH = "../model/sac/best/best_model.zip"
-# MODEL_PATH = "../model/sac/88_sac_carracing"
-# MODEL_PATH = "../model/sac/checkpoint/sac_checkpoint_200000_steps"
+# MODEL_PATH = "../model/sac/best/88_best_model.zip"
+# MODEL_PATH = "../model/sac/94_sac_carracing"
+# MODEL_PATH = "../model/sac/checkpoint/sac_checkpoint_250000_steps"
 
 
 def main():

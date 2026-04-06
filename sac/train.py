@@ -55,37 +55,47 @@ def main():
         net_arch=[256, 256],  # stronger policy/value nets
     )
 
-    model = SAC(
-        "CnnPolicy",
-        train_env,
-        policy_kwargs=policy_kwargs,
-        verbose=1,
+    # model = SAC(
+    #     "CnnPolicy",
+    #     train_env,
+    #     policy_kwargs=policy_kwargs,
+    #     verbose=1,
 
 
-        buffer_size=100_000,
-        batch_size=256,
-        learning_rate=5e-5,
+    #     buffer_size=100_000,
+    #     batch_size=256,
+    #     learning_rate=1e-4,
 
-        # multi-env
-        train_freq=(16, "step"),
-        gradient_steps=16,  
+    #     # multi-env
+    #     train_freq=(8, "step"),
+    #     gradient_steps=8,  
 
-        learning_starts=5_000,
+    #     learning_starts=5_000,
 
-        gamma=0.99,
-        tau=0.005,
+    #     gamma=0.99,
+    #     tau=0.005,
 
-        # Exploration
-        ent_coef="auto_0.1",
+    #     # Exploration
+    #     ent_coef="auto_0.1",
 
-        # Stability
-        target_update_interval=1,
+    #     # Stability
+    #     target_update_interval=1,
 
+    #     device="cuda",
+    #     tensorboard_log=LOG_DIR,
+    # )
+
+    # model.set_parameters("../model/sac/best/88_best_model.zip")
+
+    model = SAC.load(
+        "../model/sac/best/88_best_model.zip",
+        env=train_env,
         device="cuda",
         tensorboard_log=LOG_DIR,
     )
-
-    model.set_parameters("../model/sac/best/86_best_model.zip")
+    
+    model.learning_rate = 1e-4
+    model.lr_schedule = lambda _: 1e-4
 
 
 
@@ -93,7 +103,7 @@ def main():
         eval_env,
         best_model_save_path=BEST_MODEL_DIR,
         log_path=LOG_DIR,
-        eval_freq=50_000,  
+        eval_freq=20_000,  
         deterministic=True,
         render=False,
     )
